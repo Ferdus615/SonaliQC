@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SonaliPay — Call Quality Control</title>
+<style>
+  /* ── Google Fonts ── */
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+  /* ── Tokens ── */
+  :root {
+    /* Brand palette (Sonali) */
+    --blue:     #17379e;
+    --blue-rgb:  23, 55, 158;
+    --blue-alt: #1d3fa8;
+    --gold:     #e4b21b;
+    --gold-rgb:  228, 178, 27;
+    --gold-alt: #f0c232;
+    --gold-lt:  #faf0cf;
+
+    /* Legacy names mapped to the brand (kept so existing CSS + JS keep working) */
+    --navy:    #17379e;
+    --navy-lt: #1d3fa8;
+    --teal:    #17379e;
+    --teal-lt: #e7ebf7;
+
+    /* Status colours */
+    --amber:   #b8860b;
+    --amber-lt:#fbf1d4;
+    --red:     #d32f2f;
+    --red-lt:  #fdecec;
+    --green:   #2e7d32;
+    --green-lt:#e7f3e8;
+    --purple:  #5b3fb0;
+    --purple-lt:#ece7f7;
+    --orange:  #c75b1e;
+    --orange-lt:#fbe9dc;
+
+    /* Neutrals */
+    --slate:   #666666;
+    --slate-lt:#f1f1f4;
+    --border:  #d9d9d9;
+    --text:    #333333;
+    --text-sm: #666666;
+    --white:   #ffffff;
+    --bg:      #f4f4f4;
+    --row-alt: #f7f8fb;
+
+    --font:    'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono:    'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --radius:  6px;
+    --radius-lg: 14px;
+    --shadow:  0 1px 2px rgba(16,24,40,.04), 0 4px 16px rgba(16,24,40,.06);
+    --shadow-md: 0 2px 4px rgba(16,24,40,.05), 0 14px 32px rgba(16,24,40,.1);
+    --neon-glow: 0 4px 12px rgba(23,55,158,.18);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Numeric displays keep a single typeface but align in columns */
+  .td-mono, .kpi-value, .total-display, .score-input,
+  .checklist-num, .agent-score { font-variant-numeric: tabular-nums; }
+
+  /* ── Top bar ── */
+  .topbar {
+    background: rgba(255,255,255,.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: var(--blue);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-top: 3px solid var(--gold);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(16,24,40,.05);
+  }
+  .topbar-brand { display: flex; align-items: center; gap: 14px; }
+  .topbar-logo { display: flex; align-items: center; }
+  .topbar-logo svg { height: 36px; width: auto; display: block; }
+  .topbar-title { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; color: var(--blue); }
+  .topbar-sub { font-size: 11px; color: var(--text-sm); margin-top: 1px; font-weight: 500; }
+  .topbar-actions { display: flex; gap: 8px; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: var(--radius);
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    border: none; transition: all .15s; text-decoration: none;
+    font-family: var(--font);
+  }
+  .btn-primary { background: var(--gold); color: var(--blue); font-weight: 600; box-shadow: 0 1px 2px rgba(228,178,27,.3); }
+  .btn-primary:hover { background: var(--gold-alt); box-shadow: 0 3px 10px rgba(228,178,27,.35); }
+  .btn-ghost { background: var(--white); color: var(--blue); border: 1px solid var(--border); font-weight: 600; }
+  .btn-ghost:hover { background: var(--bg); border-color: var(--blue); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-danger { background: var(--white); color: var(--red); border: 1px solid rgba(211,47,47,.35); font-weight: 600; }
+  .btn-danger:hover { background: rgba(211,47,47,.06); border-color: var(--red); }
+
+  /* ── Hero banner ── */
+  .hero {
+    background: var(--blue);
+    text-align: center;
+    padding: 2.75rem 2rem 2.5rem;
+  }
+  .hero h1 {
+    font-size: 2rem; font-weight: 700; line-height: 1.15;
+    letter-spacing: -0.01em; color: #fff; margin: 0;
+  }
+  .hero h1::after {
+    content: ""; display: block;
+    width: 64px; height: 3px; background: var(--gold);
+    margin: .9rem auto 0; border-radius: 2px;
+  }
+  .hero p {
+    margin: 1rem auto 0; max-width: 640px;
+    color: var(--gold); font-size: .78rem; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+  }
+  @media (max-width: 640px) { .hero { padding: 2rem 1.25rem; } .hero h1 { font-size: 1.6rem; } }
+
+  /* ── Tab nav ── */
+  .tab-nav {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    padding: 0 24px;
+    overflow-x: auto;
+    gap: 2px;
+    position: sticky;
+    top: 64px;
+    z-index: 90;
+    box-shadow: 0 1px 3px rgba(16,24,40,.04);
+  }
+  .tab-btn {
+    padding: 14px 18px;
+    font-size: 13px; font-weight: 500;
+    color: var(--slate);
+    border: none; background: none; cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: all .15s;
+    font-family: var(--font);
+  }
+  .tab-btn:hover { color: var(--blue); }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--gold); font-weight: 600; }
+
+  /* ── Content area ── */
+  .tab-panel { display: none; padding: 24px; max-width: 1400px; margin: 0 auto; }
+  .tab-panel.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    transition: box-shadow .25s ease;
+  }
+  .card:hover { box-shadow: var(--shadow-md); }
+  .card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+  }
+  .card-title { font-size: 15px; font-weight: 600; color: var(--blue); }
+  .card-body { padding: 20px; }
+
+  /* ── Section headers ── */
+  .section-hdr {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--slate);
+    margin-bottom: 12px; margin-top: 24px;
+  }
+  .section-hdr:first-child { margin-top: 0; }
+
+  /* ── KPI grid ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 12px; margin-bottom: 24px; }
+  .kpi-card {
+    border-radius: var(--radius); padding: 16px 18px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; opacity: .75; }
+  .kpi-value { font-size: 28px; font-weight: 700; line-height: 1; font-family: var(--mono); }
+  .kpi-sub { font-size: 11px; opacity: .65; margin-top: 2px; }
+  .kpi-navy  { background: var(--blue);   color: #fff; }
+  .kpi-teal  { background: var(--gold);   color: var(--blue); }
+  .kpi-red   { background: var(--red);    color: #fff; }
+  .kpi-amber { background: var(--amber);  color: #fff; }
+  .kpi-green { background: var(--green);  color: #fff; }
+  .kpi-purple{ background: var(--purple); color: #fff; }
+
+  /* ── Table ── */
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: var(--teal-lt); color: var(--blue);
+    padding: 12px 14px; text-align: left;
+    font-size: 10.5px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
+    white-space: nowrap;
+    border-bottom: 2px solid rgba(23,55,158,.22);
+    position: sticky; top: 0;
+  }
+  thead th:first-child { padding-left: 20px; }
+  thead th:last-child  { padding-right: 20px; }
+  tbody tr { border-bottom: 1px solid #edeff3; transition: background .12s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  tbody tr:hover { background: rgba(23,55,158,.055); }
+  tbody td { padding: 11px 14px; vertical-align: middle; color: var(--text); }
+  tbody td:first-child { padding-left: 20px; }
+  tbody td:last-child  { padding-right: 20px; }
+  /* Column alignment helpers */
+  .col-c { text-align: center; }
+  .col-r { text-align: right; }
+  /* Numeric / reference cells */
+  .td-mono { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .ref-id {
+    display: inline-block; font-size: 11.5px; font-weight: 600;
+    color: var(--slate); letter-spacing: .02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .score-cell { font-weight: 700; color: var(--blue); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .score-cell small { font-weight: 500; color: var(--slate); font-size: 10px; }
+  .agent-name { font-weight: 600; color: var(--text); }
+  .muted-cell { color: var(--slate); }
+  /* Compact inline form controls inside data tables */
+  .tbl-wrap select, .tbl-wrap input, .tbl-wrap textarea {
+    font-size: 12px; padding: 6px 8px; border-radius: var(--radius);
+  }
+  .tbl-wrap textarea { min-height: 38px; line-height: 1.45; }
+  /* Table action buttons */
+  .row-actions { display: inline-flex; gap: 6px; white-space: nowrap; }
+  .icon-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 11px; border-radius: var(--radius);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border); background: var(--white);
+    color: var(--blue); transition: all .15s; font-family: var(--font);
+  }
+  .icon-btn:hover { border-color: var(--blue); background: rgba(23,55,158,.05); }
+  .icon-btn.danger { color: var(--red); border-color: rgba(211,47,47,.3); }
+  .icon-btn.danger:hover { background: rgba(211,47,47,.06); border-color: var(--red); }
+
+  /* ── Badges (formal status chips) ── */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 9px; border-radius: 5px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: .03em;
+    text-transform: uppercase; white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .badge-excellent { background: var(--green-lt); color: var(--green); border-color: rgba(46,125,50,.22); }
+  .badge-good      { background: var(--teal-lt);  color: var(--blue);  border-color: rgba(23,55,158,.2); }
+  .badge-ni        { background: var(--amber-lt); color: var(--amber); border-color: rgba(184,134,11,.28); }
+  .badge-unsat     { background: var(--red-lt);   color: var(--red);   border-color: rgba(211,47,47,.25); }
+  .badge-critical  { background: var(--red);      color: #fff;         border-color: var(--red); }
+  .badge-major     { background: var(--amber-lt); color: var(--amber); border-color: rgba(184,134,11,.28); }
+  .badge-minor     { background: var(--teal-lt);  color: var(--blue);  border-color: rgba(23,55,158,.2); }
+  .badge-na        { background: var(--green-lt); color: var(--green); border-color: rgba(46,125,50,.22); }
+  .badge-open      { background: var(--amber-lt); color: var(--amber); border-color: rgba(184,134,11,.28); }
+  .badge-closed    { background: var(--green-lt); color: var(--green); border-color: rgba(46,125,50,.22); }
+  .badge-escalated { background: var(--red-lt);   color: var(--red);   border-color: rgba(211,47,47,.25); }
+  .badge-yes       { background: var(--red-lt);   color: var(--red);   border-color: rgba(211,47,47,.25); }
+  .badge-no        { background: var(--green-lt); color: var(--green); border-color: rgba(46,125,50,.22); }
+
+  /* ── Forms ── */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .form-grid-wide { grid-template-columns: 1fr 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 600; color: var(--text); }
+  label span.req { color: var(--red); margin-left: 2px; }
+  input, select, textarea {
+    font-family: var(--font); font-size: 13px; color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 8px 10px; background: var(--white);
+    transition: border-color .15s, box-shadow .15s;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(23,55,158,.12);
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  .score-input { width: 70px; text-align: center; font-family: var(--mono); font-weight: 600; }
+  .score-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .score-group { display: flex; flex-direction: column; gap: 5px; align-items: center; min-width: 80px; }
+  .score-group label { text-align: center; font-size: 11px; line-height: 1.3; }
+  .grade-display {
+    padding: 10px 16px; border-radius: var(--radius);
+    font-weight: 700; font-size: 16px; text-align: center;
+    min-width: 160px; border: 2px solid transparent;
+    transition: all .2s;
+  }
+  .total-display {
+    font-family: var(--mono); font-size: 24px; font-weight: 700;
+    color: var(--navy); text-align: center; padding: 8px;
+  }
+
+  /* ── Form actions ── */
+  .form-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,23,42,.5); z-index: 200;
+    align-items: flex-start; justify-content: center;
+    padding: 40px 16px; overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--white); border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    width: 100%; max-width: 800px;
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; color: var(--navy); }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--slate); padding: 4px; line-height: 1; }
+  .modal-body { padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ── Toast ── */
+  .toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--navy); color: #fff; padding: 12px 18px;
+    border-radius: var(--radius); font-size: 13px; font-weight: 500;
+    box-shadow: var(--shadow-md); animation: fadeIn .2s ease;
+    display: flex; align-items: center; gap: 8px; max-width: 320px;
+  }
+  .toast.success { background: var(--green); }
+  .toast.error   { background: var(--red); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+
+  /* ── Period selector ── */
+  .period-bar {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 20px;
+    display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap; margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .period-bar label { font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .period-bar select { width: auto; min-width: 140px; }
+  .period-label {
+    font-size: 16px; font-weight: 700; color: var(--navy);
+    padding: 6px 16px; background: var(--navy);
+    color: #fff; border-radius: var(--radius);
+  }
+
+  /* ── Instructions ── */
+  .inst-section { margin-bottom: 28px; }
+  .inst-section-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--white);
+    background: var(--navy); padding: 8px 14px;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .inst-body {
+    border: 1px solid var(--border); border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    overflow: hidden;
+  }
+  .inst-row {
+    display: grid; grid-template-columns: 220px 1fr;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .inst-row:last-child { border-bottom: none; }
+  .inst-row-key {
+    padding: 10px 14px; font-weight: 600;
+    background: var(--row-alt); color: var(--navy);
+  }
+  .inst-row-val { padding: 10px 14px; color: var(--text); }
+  .inst-note {
+    padding: 10px 14px; font-size: 13px; color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+  .inst-note:last-child { border-bottom: none; }
+
+  /* ── Checklist ── */
+  .checklist-process { margin-bottom: 32px; }
+  .checklist-process-title {
+    font-size: 14px; font-weight: 700; color: #fff;
+    padding: 10px 16px; border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .checklist-dim { border: 1px solid var(--border); border-top: none; }
+  .checklist-dim:last-child { border-radius: 0 0 var(--radius) var(--radius); overflow: hidden; }
+  .checklist-dim-hdr {
+    background: var(--slate-lt); padding: 8px 16px;
+    font-size: 12px; font-weight: 700; color: var(--navy);
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .checklist-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 16px; border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .checklist-item:last-child { border-bottom: none; }
+  .checklist-item:nth-child(even) { background: var(--row-alt); }
+  .checklist-num {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    color: var(--slate); min-width: 20px;
+  }
+  .score-badge {
+    margin-left: auto; background: var(--navy-lt); color: #fff;
+    font-size: 10px; font-weight: 700; padding: 2px 7px;
+    border-radius: 100px; white-space: nowrap;
+  }
+
+  /* ── Feedback auto-flag ── */
+  .auto-flag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 600; color: var(--amber);
+    background: var(--amber-lt); padding: 3px 9px; border-radius: 5px;
+    border: 1px solid rgba(184,134,11,.28); letter-spacing: .02em;
+  }
+  .auto-flag.critical { color: var(--red); background: var(--red-lt); border-color: rgba(211,47,47,.25); }
+
+  /* ── Empty state ── */
+  .empty {
+    text-align: center; padding: 48px 24px; color: var(--slate);
+  }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-title { font-size: 16px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+  .empty-sub { font-size: 13px; }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  /* ── Agent table ── */
+  .agent-score { font-family: var(--mono); font-weight: 600; }
+  .progress-bar-wrap { background: var(--border); border-radius: 100px; height: 6px; min-width: 60px; }
+  .progress-bar { background: var(--teal); border-radius: 100px; height: 6px; transition: width .3s; }
+
+  /* ── Dev note banner ── */
+  .dev-banner {
+    background: rgba(23,55,158,.05); color: var(--text);
+    padding: 12px 16px; font-size: 12px; font-family: var(--font);
+    border-radius: var(--radius); margin-bottom: 20px;
+    border-left: 3px solid var(--gold);
+    line-height: 1.6;
+  }
+  .dev-banner strong { color: var(--blue); }
+  .dev-banner code { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; background: rgba(23,55,158,.08); padding: 1px 5px; border-radius: 4px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .tab-panel { padding: 16px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .form-grid { grid-template-columns: 1fr; }
+    .topbar-sub { display: none; }
+  }
+
+  /* ── Print ── */
+  @media print {
+    .topbar, .hero, .tab-nav, .form-actions, .modal-overlay, .toast-wrap { display: none !important; }
+    .tab-panel { display: block !important; padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ TOP BAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo" aria-label="SonaliPay">
+      <svg width="171" height="50" viewBox="0 0 171 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g clip-path="url(#clip0_487_21812)">
+        <path d="M14.3527 0L14.5653 1.0101C15.4616 4.54545 18.138 7.44637 21.5939 8.59838C27.5595 10.5894 33.9044 7.03732 35.4385 1.0101L35.6511 0V14.2917L35.697 14.3376H50.0043L48.8954 14.5755C45.1268 15.5564 42.0627 18.6284 41.1456 22.4267C39.7699 28.1451 43.1549 33.8342 48.762 35.3953L49.9417 35.6582H35.697L35.6511 35.7042V49.9958L35.3968 48.8396C33.9753 43.5345 28.7434 40.1119 23.2823 40.9884C19.1343 41.6521 15.6867 44.7825 14.6112 48.8396L14.3569 49.9958V35.7042L14.311 35.6582H0.0620621L1.1126 35.4287C7.20738 33.8175 10.6717 27.3437 8.52056 21.3332C7.33662 18.0316 4.4935 15.4604 1.10426 14.5755L-0.00463867 14.3376H14.3027L14.3485 14.2917V0H14.3527ZM35.3426 34.214C42.5588 26.079 38.0148 13.1438 27.351 11.3365C17.1583 9.60848 8.68314 19.2462 11.7722 29.1552C14.9655 39.3981 28.1931 42.2656 35.3426 34.2099V34.214Z" fill="#AB782B"/>
+        <path d="M36.5729 25.4987L27.8226 27.807L25.4797 36.6266C25.313 37.0356 24.7835 37.0606 24.5542 36.6933L22.1822 27.8028L13.4319 25.4946C12.9358 25.3234 12.9566 24.6389 13.4652 24.497L22.1864 22.1888L24.5084 13.4401C24.6376 12.9393 25.3463 12.9226 25.4964 13.4151L27.8017 22.1971L36.5479 24.497C37.0481 24.6306 37.0731 25.3276 36.5771 25.4946L36.5729 25.4987Z" fill="#AB782B"/>
+        <path d="M32.842 32.6614C31.3204 34.1056 28.8233 33.2499 28.4648 31.1963C28.1396 29.3264 29.9155 27.7236 31.7456 28.2286C33.705 28.7754 34.3303 31.2506 32.842 32.6614Z" fill="#AB782B"/>
+        <path d="M17.4385 32.7949C16.0045 31.6262 16.2421 29.2763 17.8929 28.4331C19.7606 27.4815 21.8783 28.9382 21.7074 31.0127C21.5365 33.0871 19.0519 34.1056 17.4427 32.7949H17.4385Z" fill="#AB782B"/>
+        <path d="M32.8164 21.0242C31.5824 22.1429 29.5439 21.8006 28.756 20.3397C27.6513 18.2903 29.5106 15.9612 31.745 16.5539C33.7169 17.0757 34.3339 19.6552 32.8206 21.0242H32.8164Z" fill="#AB782B"/>
+        <path d="M18.7845 16.4747C20.848 16.2618 22.3446 18.307 21.465 20.2062C20.6187 22.0302 18.0132 22.2014 16.9168 20.5192C15.8204 18.8371 16.8668 16.675 18.7845 16.4788V16.4747Z" fill="#AB782B"/>
+        <path d="M54.9156 28.4957C54.9782 29.6227 55.2325 30.5368 55.6827 31.238C56.5415 32.5528 58.0506 33.2082 60.2184 33.2082C61.1897 33.2082 62.0735 33.0662 62.8697 32.7741C64.4122 32.2148 65.1834 31.2172 65.1834 29.7772C65.1834 28.6961 64.8582 27.9281 64.2037 27.469C63.5409 27.0182 62.507 26.6258 61.0938 26.2961L58.4925 25.6867C56.7958 25.2901 55.591 24.8519 54.8865 24.376C53.665 23.5496 53.0564 22.3099 53.0564 20.6612C53.0564 18.8789 53.6567 17.4139 54.8531 16.2702C56.0537 15.1265 57.7504 14.5547 59.9474 14.5547C61.9693 14.5547 63.6868 15.0556 65.1 16.0615C66.5132 17.0674 67.2178 18.6702 67.2178 20.8783H64.6956C64.5664 19.8139 64.2913 19 63.8661 18.4323C63.0823 17.3972 61.7483 16.8796 59.8723 16.8796C58.3549 16.8796 57.2627 17.2135 56.5998 17.8772C55.937 18.545 55.6035 19.3172 55.6035 20.1979C55.6035 21.1704 55.9954 21.88 56.7791 22.3308C57.2919 22.6188 58.455 22.9778 60.2684 23.4119L62.9614 24.0463C64.2579 24.351 65.2626 24.7726 65.9671 25.3027C67.1886 26.2293 67.7972 27.5775 67.7972 29.3389C67.7972 31.5344 67.0177 33.108 65.4627 34.0513C63.9077 34.9946 62.0985 35.4705 60.0349 35.4705C57.6337 35.4705 55.7494 34.8402 54.3904 33.5796C53.0313 32.3275 52.3643 30.6328 52.3893 28.4874H54.9115L54.9156 28.4957Z" fill="#304297"/>
+        <path d="M81.0369 21.88C82.3126 23.1197 82.9504 24.9479 82.9504 27.3563C82.9504 29.7647 82.3876 31.6095 81.262 33.133C80.1365 34.6524 78.3897 35.412 76.026 35.412C74.0542 35.412 72.4867 34.74 71.3236 33.396C70.1647 32.052 69.5811 30.2447 69.5811 27.9782C69.5811 25.5489 70.1939 23.6164 71.4153 22.1764C72.6368 20.7364 74.2835 20.0184 76.3428 20.0184C78.1896 20.0184 79.7529 20.6404 81.0327 21.88H81.0369ZM79.532 31.4927C80.1239 30.2739 80.4199 28.9173 80.4199 27.4272C80.4199 26.079 80.2073 24.9813 79.7779 24.1381C79.1026 22.8066 77.9353 22.143 76.2845 22.143C74.8171 22.143 73.7499 22.7106 73.0828 23.8418C72.4158 24.9729 72.0823 26.342 72.0823 27.9406C72.0823 29.5393 72.4158 30.7581 73.0828 31.7849C73.7499 32.8117 74.8087 33.3209 76.2553 33.3209C77.8478 33.3209 78.94 32.7115 79.5278 31.4927H79.532Z" fill="#304297"/>
+        <path d="M85.2437 20.4358H87.549V22.4894C88.2327 21.6421 88.9581 21.0369 89.721 20.6654C90.4839 20.2981 91.3343 20.1102 92.2723 20.1102C94.3233 20.1102 95.7074 20.8282 96.4244 22.2598C96.8204 23.0445 97.0164 24.1632 97.0164 25.624V34.9028H94.5484V25.7868C94.5484 24.9061 94.4192 24.1924 94.1566 23.6539C93.723 22.7524 92.9434 22.3016 91.8095 22.3016C91.2342 22.3016 90.7632 22.36 90.3921 22.4769C89.7251 22.673 89.1415 23.0696 88.6371 23.6665C88.2327 24.1423 87.9701 24.6348 87.8492 25.144C87.7283 25.6533 87.6657 26.3795 87.6657 27.327V34.9028H85.2395V20.44L85.2437 20.4358Z" fill="#304297"/>
+        <path d="M107.659 26.1458C108.218 26.0749 108.589 25.8411 108.78 25.4446C108.889 25.2276 108.943 24.9145 108.943 24.5096C108.943 23.679 108.647 23.0738 108.059 22.6981C107.471 22.3225 106.629 22.1346 105.537 22.1346C104.27 22.1346 103.373 22.4769 102.844 23.1656C102.548 23.5454 102.356 24.1131 102.265 24.8603H99.9967C100.043 23.0738 100.618 21.8299 101.727 21.1287C102.836 20.4275 104.124 20.0811 105.587 20.0811C107.284 20.0811 108.664 20.4066 109.723 21.0536C110.773 21.7006 111.298 22.7107 111.298 24.0797V32.411C111.298 32.6614 111.348 32.8659 111.453 33.0204C111.557 33.1748 111.774 33.2499 112.107 33.2499C112.215 33.2499 112.336 33.2416 112.47 33.2291C112.603 33.2165 112.749 33.1957 112.903 33.1706V34.9654C112.524 35.074 112.236 35.1407 112.04 35.17C111.844 35.195 111.574 35.2117 111.232 35.2117C110.394 35.2117 109.789 34.9153 109.41 34.3226C109.21 34.0096 109.072 33.563 108.993 32.987C108.497 33.6339 107.788 34.1974 106.863 34.6733C105.937 35.1491 104.916 35.387 103.803 35.387C102.465 35.387 101.368 34.978 100.518 34.1682C99.6674 33.3585 99.2422 32.3358 99.2422 31.1129C99.2422 29.773 99.6591 28.7337 100.497 27.9991C101.335 27.2645 102.431 26.8095 103.786 26.6384L107.659 26.1542V26.1458ZM102.548 32.7115C103.061 33.1164 103.669 33.3167 104.37 33.3167C105.224 33.3167 106.05 33.1205 106.85 32.724C108.201 32.0687 108.872 30.9918 108.872 29.5017V27.5483C108.576 27.7361 108.197 27.8947 107.73 28.0241C107.263 28.1493 106.804 28.2412 106.358 28.2954L104.891 28.4833C104.011 28.6001 103.348 28.7838 102.907 29.0342C102.156 29.4558 101.781 30.132 101.781 31.0544C101.781 31.7557 102.035 32.3066 102.548 32.7115Z" fill="#304297"/>
+        <path d="M114.659 15.0597H117.085V34.8986H114.659V15.0597Z" fill="#304297"/>
+        <path d="M120.036 15.0597H122.504V17.8145H120.036V15.0597ZM120.036 20.5025H122.504V34.8986H120.036V20.5025Z" fill="#304297"/>
+        <path d="M134.252 27.7402H130.029V34.8986H125.902V14.9929H134.561C136.558 14.9929 138.15 15.5063 139.334 16.5331C140.522 17.5599 141.114 19.1502 141.114 21.2998C141.114 23.6497 140.522 25.311 139.334 26.2835C138.146 27.256 136.454 27.7402 134.248 27.7402H134.252ZM136.195 23.5955C136.733 23.1196 137.004 22.3642 137.004 21.3248C137.004 20.2855 136.733 19.5509 136.187 19.1085C135.641 18.666 134.882 18.4448 133.902 18.4448H130.029V24.3051H133.902C134.882 24.3051 135.645 24.0671 136.195 23.5913V23.5955Z" fill="#304297"/>
+        <path d="M143.786 21.7715C144.803 20.4734 146.546 19.8264 149.018 19.8264C150.627 19.8264 152.057 20.1478 153.308 20.7864C154.558 21.425 155.184 22.6313 155.184 24.4053V31.1587C155.184 31.6262 155.192 32.1939 155.209 32.8617C155.234 33.3668 155.313 33.709 155.438 33.8885C155.563 34.068 155.751 34.2183 156.005 34.3351V34.9028H151.824C151.707 34.6064 151.628 34.3268 151.582 34.0638C151.536 33.8009 151.503 33.5045 151.473 33.1706C150.944 33.7466 150.331 34.2391 149.639 34.644C148.814 35.1198 147.876 35.3578 146.834 35.3578C145.504 35.3578 144.403 34.9779 143.536 34.2183C142.669 33.4586 142.235 32.3775 142.235 30.9834C142.235 29.1719 142.932 27.8655 144.324 27.0516C145.087 26.6091 146.212 26.2961 147.696 26.1082L149.005 25.9455C149.714 25.8578 150.223 25.7409 150.531 25.6074C151.082 25.3736 151.353 25.0105 151.353 24.5138C151.353 23.9127 151.144 23.4953 150.727 23.2658C150.31 23.0362 149.693 22.9193 148.885 22.9193C147.976 22.9193 147.334 23.1447 146.954 23.5955C146.683 23.9294 146.504 24.3802 146.417 24.9479H142.706C142.786 23.6623 143.148 22.6021 143.786 21.7757V21.7715ZM146.642 32.1188C147 32.4151 147.442 32.5654 147.963 32.5654C148.789 32.5654 149.552 32.3233 150.248 31.8349C150.944 31.3466 151.307 30.4617 151.332 29.1761V27.7444C151.09 27.8989 150.844 28.0199 150.598 28.1159C150.352 28.2119 150.01 28.2996 149.581 28.3789L148.718 28.5417C147.909 28.6836 147.33 28.8631 146.979 29.0676C146.387 29.4182 146.091 29.965 146.091 30.7038C146.091 31.3591 146.275 31.8349 146.646 32.1229L146.642 32.1188Z" fill="#304297"/>
+        <path d="M163.88 31.0377L166.915 20.1812H171.001L165.956 34.6607C164.985 37.4531 164.218 39.1811 163.651 39.8531C163.084 40.5251 161.95 40.859 160.253 40.859C159.911 40.859 159.636 40.859 159.432 40.8507C159.224 40.8465 158.915 40.8298 158.502 40.8048V37.7244L158.99 37.7494C159.37 37.7661 159.728 37.7536 160.07 37.7077C160.412 37.6618 160.699 37.5574 160.933 37.3988C161.158 37.2444 161.366 36.9271 161.558 36.4388C161.75 35.9504 161.829 35.6541 161.796 35.5456L156.401 20.177H160.679L163.889 31.0335L163.88 31.0377Z" fill="#304297"/>
+        </g>
+        <defs><clipPath id="clip0_487_21812"><rect width="171" height="50" fill="white"/></clipPath></defs>
+      </svg>
+    </div>
+    <div>
+      <div class="topbar-title">Quality Control</div>
+      <div class="topbar-sub">SonaliPay UK · TulipTech Managed Service</div>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-primary btn-sm" onclick="openModal()">+ New Review</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════ HERO -->
+<header class="hero">
+  <h1>Call Quality Control</h1>
+  <p>SP-QC-001 v1.0 &nbsp;•&nbsp; Sonali Pay UK Limited &nbsp;•&nbsp; contact@sonalipay.co.uk</p>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════ TAB NAV -->
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('log')">📝 QC Log</button>
+  <button class="tab-btn" onclick="switchTab('feedback')">💬 Feedback Tracker</button>
+  <button class="tab-btn" onclick="switchTab('summary')">📊 Summary Dashboard</button>
+  <button class="tab-btn" onclick="switchTab('period')">📅 Monthly Dashboard</button>
+  <button class="tab-btn" onclick="switchTab('checklist')">✅ Checklist</button>
+  <button class="tab-btn" onclick="switchTab('instructions')">📋 Instructions</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════ QC LOG -->
+<div id="tab-log" class="tab-panel active">
+  <div class="dev-banner">
+    <strong>🛠 Developer note — Data persistence:</strong> Data is currently stored in <strong>localStorage</strong> (this browser only).
+    Replace the <code>saveRecords()</code> and <code>loadRecords()</code> functions in the JS section with API calls to your server endpoint (e.g. <code>POST /api/records</code> / <code>GET /api/records</code>).
+    Export/Import JSON buttons allow data hand-off in the meantime.
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">All Reviews</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" placeholder="Search agent, ref, type…" id="logSearch" oninput="renderLog()" style="width:220px;">
+        <select id="logFilter" onchange="renderLog()" style="width:150px;">
+          <option value="">All agents</option>
+          <option>Ameer-UI Islam</option>
+          <option>Subrato Shanto</option>
+          <option>Tasnim Tanha</option>
+        </select>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table id="logTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Date</th>
+            <th>Reviewer</th>
+            <th>Agent</th>
+            <th>Interaction Type</th>
+            <th>Ref No.</th>
+            <th>Ch.</th>
+            <th class="col-c">Total</th>
+            <th class="col-c">Grade</th>
+            <th class="col-c">Severity</th>
+            <th class="col-c">Compliance</th>
+            <th class="col-c">Status</th>
+            <th class="col-c">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ FEEDBACK TRACKER -->
+<div id="tab-feedback" class="tab-panel">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Agent Feedback & Coaching Tracker</span>
+      <span style="font-size:12px;color:var(--slate);">Auto-populated when grade is Needs Improvement / Unsatisfactory or severity is Critical / Major</span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>QC Ref</th>
+            <th>Date</th>
+            <th>Agent</th>
+            <th class="col-c">Grade</th>
+            <th class="col-c">Severity</th>
+            <th>Trigger</th>
+            <th>Coaching Method</th>
+            <th>Notes / Actions</th>
+            <th>Target Date</th>
+            <th>Follow-up</th>
+            <th class="col-c">Improved?</th>
+            <th>Status</th>
+            <th class="col-c">Save</th>
+          </tr>
+        </thead>
+        <tbody id="feedbackBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SUMMARY DASHBOARD -->
+<div id="tab-summary" class="tab-panel">
+  <div class="section-hdr">Overall KPIs — All Time</div>
+  <div class="kpi-grid" id="summaryKpis"></div>
+
+  <div class="section-hdr">Per-Agent Breakdown — All Time</div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Agent</th>
+            <th>Reviews</th>
+            <th>Avg Compliance</th>
+            <th>Avg Consumer Duty</th>
+            <th>Avg Operational</th>
+            <th>Avg Knowledge</th>
+            <th>Avg Total</th>
+            <th>Critical</th>
+            <th>Major</th>
+            <th>Open Actions</th>
+            <th>Excellent %</th>
+            <th>Grade Summary</th>
+          </tr>
+        </thead>
+        <tbody id="agentBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-hdr">Grade Distribution — All Time</div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Grade</th><th>Count</th><th>% of Reviews</th></tr></thead>
+        <tbody id="gradeBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-hdr">Error Severity — All Time</div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Severity</th><th>Count</th><th>% of Reviews</th><th>Compliance-Linked</th></tr></thead>
+        <tbody id="severityBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ MONTHLY DASHBOARD -->
+<div id="tab-period" class="tab-panel">
+  <div class="period-bar">
+    <label>Month</label>
+    <select id="periodMonth" onchange="renderPeriod()">
+      <option value="1">January</option><option value="2">February</option>
+      <option value="3">March</option><option value="4">April</option>
+      <option value="5">May</option><option value="6" selected>June</option>
+      <option value="7">July</option><option value="8">August</option>
+      <option value="9">September</option><option value="10">October</option>
+      <option value="11">November</option><option value="12">December</option>
+    </select>
+    <label>Year</label>
+    <select id="periodYear" onchange="renderPeriod()">
+      <option value="2026" selected>2026</option>
+      <option value="2027">2027</option>
+      <option value="2028">2028</option>
+    </select>
+    <div class="period-label" id="periodLabel">June 2026</div>
+  </div>
+
+  <div class="section-hdr">KPIs — Selected Month</div>
+  <div class="kpi-grid" id="periodKpis"></div>
+
+  <div class="section-hdr">Per-Agent Breakdown — Selected Month</div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Agent</th><th>Reviews</th>
+            <th>Avg Compliance</th><th>Avg Consumer Duty</th>
+            <th>Avg Operational</th><th>Avg Knowledge</th>
+            <th>Avg Total</th><th>Critical</th><th>Major</th>
+            <th>Open Actions</th><th>Excellent %</th>
+          </tr>
+        </thead>
+        <tbody id="periodAgentBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-hdr">Grade Distribution — Selected Month</div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Grade</th><th>This Month</th><th>% of Month</th><th>All-Time Total</th></tr></thead>
+        <tbody id="periodGradeBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ CHECKLIST -->
+<div id="tab-checklist" class="tab-panel">
+  <p style="font-size:13px;color:var(--slate);margin-bottom:20px;">Use this tab while conducting a review. Score each criterion 0–5. Enter dimension totals (/25) into the QC Log form.</p>
+  <div id="checklistContent"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ INSTRUCTIONS -->
+<div id="tab-instructions" class="tab-panel">
+  <div id="instructionsContent"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ NEW REVIEW MODAL -->
+<div class="modal-overlay" id="reviewModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">New QC Review</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Review Date <span class="req">*</span></label>
+          <input type="date" id="f_date">
+        </div>
+        <div class="form-group">
+          <label>Reviewer <span class="req">*</span></label>
+          <select id="f_reviewer">
+            <option value="">Select…</option>
+            <option>Dilara Parvin</option>
+            <option>Mark Faustino</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Agent Name <span class="req">*</span></label>
+          <select id="f_agent">
+            <option value="">Select…</option>
+            <option>Ameer-UI Islam</option>
+            <option>Subrato Shanto</option>
+            <option>Tasnim Tanha</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Channel</label>
+          <select id="f_channel">
+            <option value="">Select…</option>
+            <option>Chat</option>
+            <option>Email</option>
+            <option>Phone</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Interaction Type</label>
+          <input type="text" id="f_inttype" list="inttype-list" placeholder="Select or type…">
+          <datalist id="inttype-list">
+            <option value="Transaction Decline">
+            <option value="KYC / IDV">
+            <option value="Duplicate Account">
+            <option value="MLRO Escalation">
+            <option value="General Enquiry">
+            <option value="Complaint">
+            <option value="Account Query">
+            <option value="Payment Query">
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label>Reference No.</label>
+          <input type="text" id="f_ref" placeholder="e.g. TXN-20260627-001">
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div class="section-hdr">Dimension Scores (0–25 each)</div>
+      <div class="score-row">
+        <div class="score-group">
+          <label>Compliance &<br>AML (/25)</label>
+          <input type="number" class="score-input" id="f_s1" min="0" max="25" placeholder="0" oninput="calcScore()">
+        </div>
+        <div class="score-group">
+          <label>Consumer<br>Duty (/25)</label>
+          <input type="number" class="score-input" id="f_s2" min="0" max="25" placeholder="0" oninput="calcScore()">
+        </div>
+        <div class="score-group">
+          <label>Operational<br>(/25)</label>
+          <input type="number" class="score-input" id="f_s3" min="0" max="25" placeholder="0" oninput="calcScore()">
+        </div>
+        <div class="score-group">
+          <label>Knowledge<br>(/25)</label>
+          <input type="number" class="score-input" id="f_s4" min="0" max="25" placeholder="0" oninput="calcScore()">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;align-items:center;margin-left:auto;">
+          <label style="font-size:11px;font-weight:600;">Total / Grade</label>
+          <div class="total-display" id="f_total">—</div>
+          <div class="grade-display" id="f_grade">—</div>
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Error Severity</label>
+          <select id="f_severity">
+            <option value="">Select…</option>
+            <option>Critical</option>
+            <option>Major</option>
+            <option>Minor</option>
+            <option>N/A - No Error</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Compliance Error?</label>
+          <select id="f_compliance">
+            <option value="">Select…</option>
+            <option>Yes</option>
+            <option>No</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Agent Acknowledged</label>
+          <select id="f_ack">
+            <option value="">Select…</option>
+            <option value="Y">Y</option>
+            <option value="N">N</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Feedback Status</label>
+          <select id="f_status">
+            <option value="">Select…</option>
+            <option>Open</option>
+            <option>Closed</option>
+            <option>Escalated</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Errors / Observations</label>
+          <textarea id="f_errors" placeholder="Describe what was observed…"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Positive Highlights</label>
+          <textarea id="f_positives" placeholder="What did the agent do well?"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Coach Actions Required</label>
+          <textarea id="f_coach" placeholder="List agreed coaching actions…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveReview()">Save Review</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Hidden import input -->
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// DATA LAYER
+// ═══════════════════════════════════════════════════════════════════════════
+// ┌─────────────────────────────────────────────────────────────────────────┐
+// │  DEVELOPER: Replace saveRecords() and loadRecords() with API calls.    │
+// │                                                                         │
+// │  Example (fetch-based):                                                 │
+// │  async function saveRecords(records) {                                  │
+// │    await fetch('/api/records', {                                         │
+// │      method: 'POST',                                                    │
+// │      headers: {'Content-Type':'application/json'},                      │
+// │      body: JSON.stringify(records)                                      │
+// │    });                                                                  │
+// │  }                                                                      │
+// │  async function loadRecords() {                                         │
+// │    const res = await fetch('/api/records');                             │
+// │    return res.json();                                                   │
+// │  }                                                                      │
+// │                                                                         │
+// │  saveFeedback() and loadFeedback() follow the same pattern.            │
+// └─────────────────────────────────────────────────────────────────────────┘
+
+function saveRecords(records) {
+  localStorage.setItem('sp_qc_records', JSON.stringify(records));
+}
+function loadRecords() {
+  try { return JSON.parse(localStorage.getItem('sp_qc_records')) || []; }
+  catch { return []; }
+}
+function saveFeedback(feedback) {
+  localStorage.setItem('sp_qc_feedback', JSON.stringify(feedback));
+}
+function loadFeedback() {
+  try { return JSON.parse(localStorage.getItem('sp_qc_feedback')) || {}; }
+  catch { return {}; }
+}
+
+let records  = loadRecords();
+let feedback = loadFeedback();
+let editId   = null;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+const MONTHS = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+const AGENTS  = ['Ameer-UI Islam','Subrato Shanto','Tasnim Tanha'];
+const GRADES  = ['Excellent','Good','Needs Improvement','Unsatisfactory'];
+const SEVS    = ['Critical','Major','Minor','N/A - No Error'];
+
+function calcGrade(total) {
+  if (isNaN(total) || total === null) return null;
+  if (total >= 90) return 'Excellent';
+  if (total >= 75) return 'Good';
+  if (total >= 60) return 'Needs Improvement';
+  return 'Unsatisfactory';
+}
+
+function gradeBadge(g) {
+  const map = {
+    'Excellent':         'badge-excellent',
+    'Good':              'badge-good',
+    'Needs Improvement': 'badge-ni',
+    'Unsatisfactory':    'badge-unsat',
+  };
+  return g ? `<span class="badge ${map[g]||''}">${g}</span>` : '—';
+}
+
+function sevBadge(s) {
+  const map = {
+    'Critical':      'badge-critical',
+    'Major':         'badge-major',
+    'Minor':         'badge-minor',
+    'N/A - No Error':'badge-na',
+  };
+  return s ? `<span class="badge ${map[s]||''}">${s}</span>` : '—';
+}
+
+function statusBadge(s) {
+  const map = { 'Open':'badge-open','Closed':'badge-closed','Escalated':'badge-escalated' };
+  return s ? `<span class="badge ${map[s]||''}">${s}</span>` : '—';
+}
+
+function yesnoBadge(v) {
+  return v === 'Yes' ? `<span class="badge badge-yes">Yes</span>`
+       : v === 'No'  ? `<span class="badge badge-no">No</span>` : '—';
+}
+
+function needsFeedback(r) {
+  return ['Needs Improvement','Unsatisfactory'].includes(r.grade) ||
+         ['Critical','Major'].includes(r.severity);
+}
+
+function uid() {
+  return 'QC-' + String(records.length + 1).padStart(3,'0') +
+         '-' + Date.now().toString(36).slice(-4).toUpperCase();
+}
+
+function avg(arr) {
+  const valid = arr.filter(v => v !== null && !isNaN(v));
+  return valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length) : null;
+}
+
+function fmt(v, decimals=1) {
+  return v !== null && !isNaN(v) ? Number(v).toFixed(decimals) : '—';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════════════════
+function switchTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (id === 'summary')  renderSummary();
+  if (id === 'period')   renderPeriod();
+  if (id === 'feedback') renderFeedback();
+  if (id === 'checklist')    renderChecklist();
+  if (id === 'instructions') renderInstructions();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════════════════════════════════
+function openModal(id) {
+  editId = id || null;
+  document.getElementById('modalTitle').textContent = id ? 'Edit QC Review' : 'New QC Review';
+
+  // Reset
+  ['f_date','f_reviewer','f_agent','f_channel','f_inttype','f_ref',
+   'f_s1','f_s2','f_s3','f_s4','f_severity','f_compliance','f_ack',
+   'f_status','f_errors','f_positives','f_coach'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f_total').textContent = '—';
+  setGradeDisplay(null);
+
+  if (id) {
+    const r = records.find(x => x.id === id);
+    if (!r) return;
+    document.getElementById('f_date').value      = r.date;
+    document.getElementById('f_reviewer').value  = r.reviewer;
+    document.getElementById('f_agent').value     = r.agent;
+    document.getElementById('f_channel').value   = r.channel;
+    document.getElementById('f_inttype').value   = r.inttype;
+    document.getElementById('f_ref').value       = r.ref;
+    document.getElementById('f_s1').value        = r.s1;
+    document.getElementById('f_s2').value        = r.s2;
+    document.getElementById('f_s3').value        = r.s3;
+    document.getElementById('f_s4').value        = r.s4;
+    document.getElementById('f_severity').value  = r.severity;
+    document.getElementById('f_compliance').value= r.compliance;
+    document.getElementById('f_ack').value       = r.ack;
+    document.getElementById('f_status').value    = r.status;
+    document.getElementById('f_errors').value    = r.errors;
+    document.getElementById('f_positives').value = r.positives;
+    document.getElementById('f_coach').value     = r.coach;
+    calcScore();
+  }
+
+  document.getElementById('reviewModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('reviewModal').classList.remove('open');
+  editId = null;
+}
+
+function setGradeDisplay(grade) {
+  const el = document.getElementById('f_grade');
+  const colors = {
+    'Excellent':         { bg: 'var(--green)',  fg: '#fff' },
+    'Good':              { bg: 'var(--teal)',   fg: '#fff' },
+    'Needs Improvement': { bg: 'var(--amber)',  fg: '#fff' },
+    'Unsatisfactory':    { bg: 'var(--red)',    fg: '#fff' },
+  };
+  if (grade && colors[grade]) {
+    el.textContent = grade;
+    el.style.background = colors[grade].bg;
+    el.style.color = colors[grade].fg;
+    el.style.borderColor = colors[grade].bg;
+  } else {
+    el.textContent = '—';
+    el.style.background = 'var(--slate-lt)';
+    el.style.color = 'var(--slate)';
+    el.style.borderColor = 'var(--border)';
+  }
+}
+
+function calcScore() {
+  const s1 = parseInt(document.getElementById('f_s1').value) || 0;
+  const s2 = parseInt(document.getElementById('f_s2').value) || 0;
+  const s3 = parseInt(document.getElementById('f_s3').value) || 0;
+  const s4 = parseInt(document.getElementById('f_s4').value) || 0;
+  const hasAny = document.getElementById('f_s1').value !== '' ||
+                 document.getElementById('f_s2').value !== '' ||
+                 document.getElementById('f_s3').value !== '' ||
+                 document.getElementById('f_s4').value !== '';
+  if (!hasAny) { document.getElementById('f_total').textContent = '—'; setGradeDisplay(null); return; }
+  const total = s1 + s2 + s3 + s4;
+  document.getElementById('f_total').textContent = total + ' / 100';
+  setGradeDisplay(calcGrade(total));
+}
+
+function saveReview() {
+  const date     = document.getElementById('f_date').value;
+  const reviewer = document.getElementById('f_reviewer').value;
+  const agent    = document.getElementById('f_agent').value;
+
+  if (!date || !reviewer || !agent) {
+    toast('Date, Reviewer and Agent are required.', 'error'); return;
+  }
+
+  const s1 = parseInt(document.getElementById('f_s1').value) || null;
+  const s2 = parseInt(document.getElementById('f_s2').value) || null;
+  const s3 = parseInt(document.getElementById('f_s3').value) || null;
+  const s4 = parseInt(document.getElementById('f_s4').value) || null;
+  const total = (s1||0)+(s2||0)+(s3||0)+(s4||0);
+  const grade = (s1!==null||s2!==null||s3!==null||s4!==null) ? calcGrade(total) : null;
+
+  const rec = {
+    id:         editId || uid(),
+    date, reviewer, agent,
+    channel:    document.getElementById('f_channel').value,
+    inttype:    document.getElementById('f_inttype').value,
+    ref:        document.getElementById('f_ref').value,
+    s1, s2, s3, s4, total, grade,
+    severity:   document.getElementById('f_severity').value,
+    compliance: document.getElementById('f_compliance').value,
+    ack:        document.getElementById('f_ack').value,
+    status:     document.getElementById('f_status').value,
+    errors:     document.getElementById('f_errors').value,
+    positives:  document.getElementById('f_positives').value,
+    coach:      document.getElementById('f_coach').value,
+    createdAt:  editId ? (records.find(x=>x.id===editId)||{}).createdAt : new Date().toISOString(),
+  };
+
+  if (editId) {
+    records = records.map(x => x.id === editId ? rec : x);
+  } else {
+    records.push(rec);
+  }
+
+  saveRecords(records);
+  closeModal();
+  renderLog();
+  toast(editId ? 'Review updated.' : 'Review saved.', 'success');
+}
+
+function deleteRecord(id) {
+  if (!confirm('Delete this review? This cannot be undone.')) return;
+  records = records.filter(x => x.id !== id);
+  // Also remove feedback for this record
+  delete feedback[id];
+  saveRecords(records);
+  saveFeedback(feedback);
+  renderLog();
+  toast('Review deleted.', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// QC LOG RENDER
+// ═══════════════════════════════════════════════════════════════════════════
+function renderLog() {
+  const search = (document.getElementById('logSearch').value||'').toLowerCase();
+  const agentF = document.getElementById('logFilter').value;
+
+  let filtered = records.filter(r => {
+    const matchAgent = !agentF || r.agent === agentF;
+    const matchSearch = !search ||
+      (r.agent||'').toLowerCase().includes(search) ||
+      (r.ref||'').toLowerCase().includes(search) ||
+      (r.inttype||'').toLowerCase().includes(search) ||
+      (r.id||'').toLowerCase().includes(search);
+    return matchAgent && matchSearch;
+  }).sort((a,b) => b.date.localeCompare(a.date));
+
+  const tbody = document.getElementById('logBody');
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="13"><div class="empty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">No reviews yet</div>
+      <div class="empty-sub">Click "+ New Review" to log your first QC review.</div>
+    </div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => `
+    <tr>
+      <td><span class="ref-id">${r.id}</span></td>
+      <td class="td-mono muted-cell">${r.date}</td>
+      <td>${r.reviewer||'<span class="muted-cell">—</span>'}</td>
+      <td><span class="agent-name">${r.agent}</span></td>
+      <td>${r.inttype||'<span class="muted-cell">—</span>'}</td>
+      <td class="td-mono muted-cell">${r.ref||'—'}</td>
+      <td>${r.channel||'<span class="muted-cell">—</span>'}</td>
+      <td class="col-c">${r.total ? `<span class="score-cell">${r.total}<small> /100</small></span>` : '<span class="muted-cell">—</span>'}</td>
+      <td class="col-c">${gradeBadge(r.grade)}</td>
+      <td class="col-c">${sevBadge(r.severity)}</td>
+      <td class="col-c">${yesnoBadge(r.compliance)}</td>
+      <td class="col-c">${statusBadge(r.status)}</td>
+      <td class="col-c">
+        <div class="row-actions">
+          <button class="icon-btn" onclick="openModal('${r.id}')">Edit</button>
+          <button class="icon-btn danger" onclick="deleteRecord('${r.id}')">Delete</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FEEDBACK TRACKER RENDER
+// ═══════════════════════════════════════════════════════════════════════════
+function renderFeedback() {
+  const triggered = records.filter(needsFeedback);
+  const tbody = document.getElementById('feedbackBody');
+
+  if (!triggered.length) {
+    tbody.innerHTML = `<tr><td colspan="13"><div class="empty">
+      <div class="empty-icon">💬</div>
+      <div class="empty-title">No feedback required</div>
+      <div class="empty-sub">Feedback rows appear automatically when a review scores Needs Improvement, Unsatisfactory, or has a Critical/Major error.</div>
+    </div></td></tr>`;
+    return;
+  }
+
+  const triggerLabel = r => {
+    if (r.severity === 'Critical') return '<span class="auto-flag critical">Critical error</span>';
+    if (r.severity === 'Major')    return '<span class="auto-flag">Major error</span>';
+    if (r.grade === 'Unsatisfactory') return '<span class="auto-flag critical">Unsatisfactory</span>';
+    return '<span class="auto-flag">Needs improvement</span>';
+  };
+
+  const methods = ['1-to-1 Call','Written Feedback','Group Training','Buddy Session','Email','Teams Call'];
+  const improved= ['Y','N','Partial'];
+  const statuses= ['Open','Closed','Escalated'];
+
+  tbody.innerHTML = triggered.sort((a,b)=>b.date.localeCompare(a.date)).map(r => {
+    const fb = feedback[r.id] || {};
+    return `
+    <tr>
+      <td><span class="ref-id">${r.id}</span></td>
+      <td class="td-mono muted-cell">${r.date}</td>
+      <td><span class="agent-name">${r.agent}</span></td>
+      <td class="col-c">${gradeBadge(r.grade)}</td>
+      <td class="col-c">${sevBadge(r.severity)}</td>
+      <td>${triggerLabel(r)}</td>
+      <td><select onchange="updateFeedback('${r.id}','method',this.value)" style="min-width:130px;">
+        <option value="">Select…</option>
+        ${methods.map(m=>`<option ${fb.method===m?'selected':''}>${m}</option>`).join('')}
+      </select></td>
+      <td><textarea rows="2" style="min-width:200px;" placeholder="Coaching actions…" onchange="updateFeedback('${r.id}','notes',this.value)">${fb.notes||''}</textarea></td>
+      <td><input type="date" style="min-width:130px;" value="${fb.targetDate||''}" onchange="updateFeedback('${r.id}','targetDate',this.value)"></td>
+      <td><input type="date" style="min-width:130px;" value="${fb.followupDate||''}" onchange="updateFeedback('${r.id}','followupDate',this.value)"></td>
+      <td class="col-c"><select onchange="updateFeedback('${r.id}','improved',this.value)">
+        <option value="">—</option>
+        ${improved.map(m=>`<option ${fb.improved===m?'selected':''}>${m}</option>`).join('')}
+      </select></td>
+      <td><select onchange="updateFeedback('${r.id}','status',this.value)">
+        <option value="">—</option>
+        ${statuses.map(s=>`<option ${fb.status===s?'selected':''}>${s}</option>`).join('')}
+      </select></td>
+      <td class="col-c"><button class="icon-btn" onclick="saveFeedbackRow('${r.id}')">Save</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateFeedback(id, field, value) {
+  if (!feedback[id]) feedback[id] = {};
+  feedback[id][field] = value;
+}
+
+function saveFeedbackRow(id) {
+  saveFeedback(feedback);
+  toast('Feedback saved.', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SUMMARY DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════
+function renderSummary() {
+  const total   = records.length;
+  const open    = records.filter(r=>r.status==='Open').length;
+  const critical= records.filter(r=>r.severity==='Critical').length;
+  const compErr = records.filter(r=>r.compliance==='Yes').length;
+  const avgScore= avg(records.map(r=>r.total));
+  const excellent=records.filter(r=>r.grade==='Excellent').length;
+
+  document.getElementById('summaryKpis').innerHTML = `
+    <div class="kpi-card kpi-navy"><div class="kpi-label">Total Reviews</div><div class="kpi-value">${total}</div><div class="kpi-sub">All time</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-label">Open Actions</div><div class="kpi-value">${open}</div><div class="kpi-sub">Pending feedback</div></div>
+    <div class="kpi-card kpi-red"><div class="kpi-label">Critical Errors</div><div class="kpi-value">${critical}</div><div class="kpi-sub">Requires same-day action</div></div>
+    <div class="kpi-card kpi-teal"><div class="kpi-label">Avg Total Score</div><div class="kpi-value">${fmt(avgScore)}</div><div class="kpi-sub">Out of 100</div></div>
+    <div class="kpi-card kpi-purple"><div class="kpi-label">Compliance Errors</div><div class="kpi-value">${compErr}</div><div class="kpi-sub">Regulatory risk</div></div>
+    <div class="kpi-card kpi-green"><div class="kpi-label">Excellent Grades</div><div class="kpi-value">${excellent}</div><div class="kpi-sub">${total?Math.round(excellent/total*100):0}% of reviews</div></div>
+  `;
+
+  // Per-agent
+  document.getElementById('agentBody').innerHTML = AGENTS.map(agent => {
+    const ag = records.filter(r=>r.agent===agent);
+    const n  = ag.length;
+    const avgT = avg(ag.map(r=>r.total));
+    const exc  = ag.filter(r=>r.grade==='Excellent').length;
+    const gradeSummary = GRADES.map(g=>`${g.charAt(0)}:${ag.filter(r=>r.grade===g).length}`).join(' ');
+    return `<tr>
+      <td><strong>${agent}</strong></td>
+      <td class="td-mono" style="text-align:center;">${n}</td>
+      <td class="td-mono" style="text-align:center;">${fmt(avg(ag.map(r=>r.s1)))}</td>
+      <td class="td-mono" style="text-align:center;">${fmt(avg(ag.map(r=>r.s2)))}</td>
+      <td class="td-mono" style="text-align:center;">${fmt(avg(ag.map(r=>r.s3)))}</td>
+      <td class="td-mono" style="text-align:center;">${fmt(avg(ag.map(r=>r.s4)))}</td>
+      <td style="text-align:center;">
+        <div class="agent-score">${fmt(avgT)}</div>
+        <div class="progress-bar-wrap" style="margin-top:4px;">
+          <div class="progress-bar" style="width:${avgT?Math.min(avgT,100):0}%"></div>
+        </div>
+      </td>
+      <td style="text-align:center;">${ag.filter(r=>r.severity==='Critical').length||'—'}</td>
+      <td style="text-align:center;">${ag.filter(r=>r.severity==='Major').length||'—'}</td>
+      <td style="text-align:center;">${ag.filter(r=>r.status==='Open').length||'—'}</td>
+      <td style="text-align:center;">${n?Math.round(exc/n*100)+'%':'—'}</td>
+      <td style="font-size:11px;font-family:var(--mono);">${gradeSummary}</td>
+    </tr>`;
+  }).join('');
+
+  // Grade distribution
+  document.getElementById('gradeBody').innerHTML = [
+    ['Excellent','badge-excellent',GREEN='var(--green)'],
+    ['Good','badge-good','var(--teal)'],
+    ['Needs Improvement','badge-ni','var(--amber)'],
+    ['Unsatisfactory','badge-unsat','var(--red)'],
+  ].map(([g,cls]) => {
+    const cnt = records.filter(r=>r.grade===g).length;
+    const pct = records.length ? Math.round(cnt/records.length*100) : 0;
+    return `<tr>
+      <td>${gradeBadge(g)}</td>
+      <td class="td-mono" style="text-align:center;">${cnt}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="progress-bar-wrap" style="flex:1;">
+            <div class="progress-bar" style="width:${pct}%;"></div>
+          </div>
+          <span class="td-mono">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Severity
+  document.getElementById('severityBody').innerHTML = SEVS.map(sev => {
+    const cnt   = records.filter(r=>r.severity===sev).length;
+    const pct   = records.length ? Math.round(cnt/records.length*100) : 0;
+    const comp  = records.filter(r=>r.severity===sev&&r.compliance==='Yes').length;
+    return `<tr>
+      <td>${sevBadge(sev)}</td>
+      <td class="td-mono" style="text-align:center;">${cnt}</td>
+      <td class="td-mono" style="text-align:center;">${pct}%</td>
+      <td style="text-align:center;">${sev==='N/A - No Error'?'—':comp}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MONTHLY DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════
+function renderPeriod() {
+  const month = parseInt(document.getElementById('periodMonth').value);
+  const year  = parseInt(document.getElementById('periodYear').value);
+  document.getElementById('periodLabel').textContent = MONTHS[month-1] + ' ' + year;
+
+  const periodRecs = records.filter(r => {
+    if (!r.date) return false;
+    const d = new Date(r.date);
+    return d.getMonth()+1 === month && d.getFullYear() === year;
+  });
+
+  const total   = periodRecs.length;
+  const open    = periodRecs.filter(r=>r.status==='Open').length;
+  const critical= periodRecs.filter(r=>r.severity==='Critical').length;
+  const major   = periodRecs.filter(r=>r.severity==='Major').length;
+  const compErr = periodRecs.filter(r=>r.compliance==='Yes').length;
+  const avgScore= avg(periodRecs.map(r=>r.total));
+
+  document.getElementById('periodKpis').innerHTML = `
+    <div class="kpi-card kpi-navy"><div class="kpi-label">Reviews This Month</div><div class="kpi-value">${total}</div></div>
+    <div class="kpi-card kpi-red"><div class="kpi-label">Critical Errors</div><div class="kpi-value">${critical}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-label">Major Errors</div><div class="kpi-value">${major}</div></div>
+    <div class="kpi-card kpi-teal"><div class="kpi-label">Avg Total Score</div><div class="kpi-value">${fmt(avgScore)}</div></div>
+    <div class="kpi-card kpi-purple"><div class="kpi-label">Compliance Errors</div><div class="kpi-value">${compErr}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-label">Open Actions</div><div class="kpi-value">${open}</div></div>
+  `;
+
+  // Per-agent
+  document.getElementById('periodAgentBody').innerHTML = AGENTS.map(agent => {
+    const ag = periodRecs.filter(r=>r.agent===agent);
+    const n  = ag.length;
+    const avgT = avg(ag.map(r=>r.total));
+    const exc  = ag.filter(r=>r.grade==='Excellent').length;
+    if (!n) return `<tr><td><strong>${agent}</strong></td><td colspan="10" style="color:var(--slate);font-size:12px;text-align:center;">No reviews in this period</td></tr>`;
+    return `<tr>
+      <td><strong>${agent}</strong></td>
+      <td class="td-mono" style="text-align:center;">${n}</td>
+      <td class="td-mono" style="text-align:center;">${fmt(avg(ag.map(r=>r.s1)))}</td>
+      <td class="td-mono" style="text-align:center;">${fmt(avg(ag.map(r=>r.s2)))}</td>
+      <td class="td-mono" style="text-align:center;">${fmt(avg(ag.map(r=>r.s3)))}</td>
+      <td class="td-mono" style="text-align:center;">${fmt(avg(ag.map(r=>r.s4)))}</td>
+      <td style="text-align:center;">
+        <div class="agent-score">${fmt(avgT)}</div>
+        <div class="progress-bar-wrap" style="margin-top:4px;">
+          <div class="progress-bar" style="width:${avgT?Math.min(avgT,100):0}%"></div>
+        </div>
+      </td>
+      <td style="text-align:center;">${ag.filter(r=>r.severity==='Critical').length||'—'}</td>
+      <td style="text-align:center;">${ag.filter(r=>r.severity==='Major').length||'—'}</td>
+      <td style="text-align:center;">${ag.filter(r=>r.status==='Open').length||'—'}</td>
+      <td style="text-align:center;">${n?Math.round(exc/n*100)+'%':'—'}</td>
+    </tr>`;
+  }).join('');
+
+  // Grade distribution
+  const allTimeGrade = g => records.filter(r=>r.grade===g).length;
+  document.getElementById('periodGradeBody').innerHTML = [
+    'Excellent','Good','Needs Improvement','Unsatisfactory'
+  ].map(g => {
+    const cnt = periodRecs.filter(r=>r.grade===g).length;
+    const pct = total ? Math.round(cnt/total*100) : 0;
+    return `<tr>
+      <td>${gradeBadge(g)}</td>
+      <td class="td-mono" style="text-align:center;">${cnt}</td>
+      <td class="td-mono" style="text-align:center;">${pct}%</td>
+      <td class="td-mono" style="text-align:center;">${allTimeGrade(g)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CHECKLIST
+// ═══════════════════════════════════════════════════════════════════════════
+const CHECKLIST_DATA = [
+  { title: 'Transaction Decline', color: '#17379e', dims: [
+    { name: 'Compliance & AML (/25)', items: ['Verified correct decline reason code in system','Confirmed customer identity before discussing account','Checked for AML/fraud flags before proceeding','Documented interaction correctly in case notes','Followed approved script / decision tree'] },
+    { name: 'Consumer Duty (/25)', items: ['Used plain English; avoided jargon','Offered next-step guidance (retry, contact bank, etc.)','Identified vulnerable customer indicators','Confirmed customer understood outcome and next steps','Maintained empathetic, professional tone'] },
+    { name: 'Operational Accuracy (/25)', items: ['Resolved or escalated within SLA','Correct system entries made','No unnecessary transfers or holds','Contact reason and resolution fully logged','No data entry errors'] },
+    { name: 'Knowledge & Adherence (/25)', items: ['Accurate product and process knowledge demonstrated','Correctly applied decline reason categories','Knew escalation path for complex cases','Adhered to system usage protocols','Handled script deviation correctly where justified'] },
+  ]},
+  { title: 'KYC / ID Verification', color: '#1d3fa8', dims: [
+    { name: 'Compliance & AML (/25)', items: ['All mandatory ID fields verified per KYC SOP','AML risk flags reviewed and actioned','MLRO escalation triggered where required','Correct KYC hold status applied in system','Third-party data check completed where applicable'] },
+    { name: 'Consumer Duty (/25)', items: ['Customer informed of purpose of ID checks','Data privacy statement shared or referenced','Sensitive data handled with discretion','Customer reassured appropriately','Outcome and next steps confirmed clearly'] },
+    { name: 'Operational Accuracy (/25)', items: ['IDV completed within permitted timeframe','Correct document types requested','Case notes complete and accurate','Follow-up actions scheduled where IDV is pending','No data quality errors in submission'] },
+    { name: 'Knowledge & Adherence (/25)', items: ['Correct ID document categories applied','Knew when to trigger Enhanced Due Diligence (EDD)','Aware of current MLRO escalation triggers','System navigation accurate and efficient','Edge cases handled correctly (e.g. expired ID)'] },
+  ]},
+  { title: 'Duplicate Account', color: '#7c3aed', dims: [
+    { name: 'Compliance & AML (/25)', items: ['Correctly identified duplication via system check','Assessed whether duplication is fraud-linked','Complied with account closure/merge SOP','Documented rationale for action taken','Regulatory obligations met (data retention, notification)'] },
+    { name: 'Consumer Duty (/25)', items: ['Explained situation without blame or accusation','Provided clear and realistic resolution timeline','Confirmed preferred account outcome with customer','Proactive follow-up promised/scheduled','Professional and reassuring tone throughout'] },
+    { name: 'Operational Accuracy (/25)', items: ['Merged or closed duplicate account per SOP','Balance/transaction history preserved correctly','Required notifications sent','Case closed within SLA','Full audit trail complete in system'] },
+    { name: 'Knowledge & Adherence (/25)', items: ['Understood difference between duplicate and linked accounts','Applied correct system process for merge/close','Knew when to involve compliance or fraud team','Data protection considerations handled correctly','Escalation path clear and followed'] },
+  ]},
+  { title: 'MLRO Escalation', color: '#dc2626', dims: [
+    { name: 'Compliance & AML (/25)', items: ['Correctly identified trigger for MLRO referral','SAR/internal referral completed fully and accurately','No tipping off: customer not informed of referral','All supporting evidence attached to case','Referral made promptly within required timelines'] },
+    { name: 'Consumer Duty (/25)', items: ['Customer interaction managed without raising suspicion','No unnecessary account action taken pending MLRO decision','Correct holding statement used if customer queries delay','Interaction documented from customer perspective','Escalated correctly without customer awareness'] },
+    { name: 'Operational Accuracy (/25)', items: ['MLRO referral form complete and accurate','Case flagged correctly in system','All interaction logs saved and linked to referral','Response/hold SLA observed','No data shared outside authorised channels'] },
+    { name: 'Knowledge & Adherence (/25)', items: ['Agent understood legal obligation to refer','Tipping-off prohibition known and applied','Correct classification of suspicion type','Escalation chain followed accurately','Post-referral steps completed correctly'] },
+  ]},
+];
+
+function renderChecklist() {
+  document.getElementById('checklistContent').innerHTML = CHECKLIST_DATA.map(proc => `
+    <div class="checklist-process">
+      <div class="checklist-process-title" style="background:${proc.color};">${proc.title}</div>
+      ${proc.dims.map(dim => `
+        <div class="checklist-dim">
+          <div class="checklist-dim-hdr">${dim.name}</div>
+          ${dim.items.map((item,i) => `
+            <div class="checklist-item">
+              <span class="checklist-num">${i+1}.</span>
+              <span>${item}</span>
+              <span class="score-badge">Max 5</span>
+            </div>
+          `).join('')}
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INSTRUCTIONS
+// ═══════════════════════════════════════════════════════════════════════════
+const INSTRUCTIONS = [
+  { title: 'Purpose & Overview', color: '#17379e', rows: null, notes: [
+    'This tool is used by Dilara Parvin and Mark Faustino to conduct quality control reviews of the SonaliPay Bangladesh support team.',
+    'Agents reviewed: Ameer-UI Islam (Team Lead), Subrato Shanto, and Tasnim Tanha.',
+    'All reviews are logged in the QC Log tab. Feedback, dashboards, and the checklist update automatically.',
+  ]},
+  { title: 'Scoring Guide', color: '#2e7d32', rows: [
+    ['0','Not done / completely absent'],
+    ['1–2','Attempted but significantly below standard'],
+    ['3','Partially met; noticeable gaps'],
+    ['4','Mostly met; minor gap only'],
+    ['5','Fully met; no issues'],
+    ['Total','Sum of all 4 dimensions (max 100)'],
+    ['90–100','Excellent'],
+    ['75–89','Good'],
+    ['60–74','Needs Improvement'],
+    ['Below 60','Unsatisfactory'],
+  ]},
+  { title: 'Error Severity Definitions', color: '#dc2626', rows: [
+    ['Critical','Payment or compliance failure — incorrect AML action, missed MLRO escalation, data breach risk. Requires same-day feedback.'],
+    ['Major','Significant process or CX failure — KYC step skipped, wrong resolution, poor handling of vulnerable customer. Feedback within 48 hours.'],
+    ['Minor','Documentation gap, tone issue, minor deviation from script. Batch in weekly 1-to-1.'],
+    ['N/A - No Error','No error identified. Interaction fully met required standards.'],
+  ]},
+  { title: 'Feedback Automation Rules', color: '#c75b1e', notes: [
+    'The Feedback Tracker auto-populates a row whenever a review scores Needs Improvement or Unsatisfactory, OR has a Critical or Major error.',
+    'Reviewers should complete the Coaching Method, Notes, Target Date, and Follow-up Date fields before delivering feedback.',
+    'Mark the row as Closed once the coaching session has taken place and the agent has acknowledged.',
+  ]},
+  { title: 'Field Definitions', color: '#1d3fa8', rows: [
+    ['Review Date','Date the QC review was conducted. Enter in YYYY-MM-DD format.'],
+    ['Reviewer','Select: Dilara Parvin or Mark Faustino.'],
+    ['Agent Name','Select the agent being reviewed.'],
+    ['Interaction Type','Select from the list or type a custom interaction type.'],
+    ['Reference No.','Transaction or case reference number from the system.'],
+    ['Channel','Chat, Email, or Phone.'],
+    ['Dimension Scores','Enter 0–25 per dimension. Use the Checklist tab as your guide (5 criteria × max 5 pts).'],
+    ['Grade','Auto-calculated from Total Score.'],
+    ['Error Severity','Select the worst error observed. Select N/A - No Error if no errors found.'],
+    ['Compliance Error?','Yes if the error has a regulatory or compliance implication.'],
+    ['Coach Actions Required','List specific coaching actions agreed with the agent.'],
+    ['Feedback Status','Open = not yet delivered. Closed = delivered and resolved. Escalated = referred to management.'],
+  ]},
+  { title: 'Monthly Governance Meeting', color: '#7c3aed', notes: [
+    'The Monthly Governance Meeting is held on the 3rd Thursday of each month at 11:00 AM UK time.',
+    'Use the Monthly Dashboard tab to pull the current month\'s data for the meeting.',
+    'Review: Critical/Major error trends, open coaching actions, grade distribution, per-agent patterns.',
+    'All agent matters discussed should reference the QC Log ID for traceability.',
+  ]},
+];
+
+function renderInstructions() {
+  document.getElementById('instructionsContent').innerHTML = INSTRUCTIONS.map(sec => `
+    <div class="inst-section">
+      <div class="inst-section-title" style="background:${sec.color};">${sec.title}</div>
+      <div class="inst-body">
+        ${sec.notes ? sec.notes.map(n=>`<div class="inst-note">${n}</div>`).join('') : ''}
+        ${sec.rows ? sec.rows.map(([k,v])=>`
+          <div class="inst-row">
+            <div class="inst-row-key">${k}</div>
+            <div class="inst-row-val">${v}</div>
+          </div>`).join('') : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════════════════════════════════
+function exportData() {
+  const data = { records, feedback, exportedAt: new Date().toISOString(), version: 1 };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sonalipay-qc-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('Data exported.', 'success');
+}
+
+function importData() {
+  document.getElementById('importFile').click();
+}
+
+function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.records) throw new Error('Invalid file');
+      if (!confirm(`Import ${data.records.length} records? This will replace existing data.`)) return;
+      records  = data.records;
+      feedback = data.feedback || {};
+      saveRecords(records);
+      saveFeedback(feedback);
+      renderLog();
+      toast(`Imported ${records.length} records.`, 'success');
+    } catch {
+      toast('Import failed — invalid file.', 'error');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════════════════
+function toast(msg, type='') {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = (type==='success'?'✓ ':type==='error'?'✕ ':'') + msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  renderLog();
+  renderChecklist();
+  renderInstructions();
+  // Set today's date as default
+  document.getElementById('f_date').value = new Date().toISOString().slice(0,10);
+});
+
+// Close modal on overlay click
+document.getElementById('reviewModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
